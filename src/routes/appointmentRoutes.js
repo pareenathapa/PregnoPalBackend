@@ -1,6 +1,7 @@
 const express = require("express");
 const Appointment = require("../models/Appointment");
 const { protect } = require("../utils/auth");
+const io = require("../socket");
 
 const router = express.Router();
 
@@ -43,21 +44,25 @@ router.post("/", protect, async (req, res) => {
     title,
   } = req.body;
   try {
+    const app_date = new Date(appointment_date);
+    time = app_date.getTime();
     const appointment = new Appointment({
       title,
       parent_id: req.user, // The logged-in user is the parent
       doctor_id,
       child_id,
-      appointment_date,
+      appointment_date: app_date,
+      time: time,
       mode,
       description,
       meeting_link: mode === "Online" ? meeting_link : null,
     });
 
     await appointment.save();
+
     res.status(201).json({ message: "Appointment created", appointment });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 
@@ -72,7 +77,7 @@ router.get("/", protect, async (req, res) => {
 
     res.status(200).json(appointments);
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 
@@ -88,23 +93,89 @@ router.get("/:appointmentId", protect, async (req, res) => {
     }
     res.status(200).json(appointment);
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 
-// Update Appointment (Protected)
-router.put("/:appointmentId", protect, async (req, res) => {
-  const { status, counter_proposal_date, counter_mode, description } = req.body;
+// Counter Appointment
+router.post("/counter/:appointmentId", protect, async (req, res) => {
+  const { counter_proposal_date, counter_mode, counter_proposal_time } =
+    req.body;
 
   try {
+    // Get the appointment
+    const appointment = await Appointment.findOne({
+      _id: req.params.appointmentId,
+      parent_id: req.user,
+    });
+
+    // Check if the appointment exists
+    if (!appointment) {
+      return res.status(404).json({ message: "Appointment not found" });
+    }
+
+    // Update the appointment with the counter proposal
+    const updatedAppointment = await Appointment.findOneAndUpdate(
+      { _id: req.params.appointmentId, parent_id: req.user },
+      {
+        counter_proposal_date: counter_proposal_date,
+        counter_mode: counter_mode,
+        counter_proposal_time: counter_proposal_time,
+        updated_at: Date.now(),
+        status: "Countered",
+      },
+      { new: true }
+    );
+    // change the title according to the action (if updated time, date, mode)
+    const counterTitle = `${
+      counter_proposal_date !== appointment.appointment_date ? "Date" : ""
+    }, ${counter_mode !== appointment.mode ? "Mode" : ""}, ${
+      counter_proposal_time !== appointment.time ? "Time" : ""
+    } Countered on your Appointment`;
+
+    // Notify the doctor about the counter proposal
+    io.emit("appointment-updated", {
+      action: "countered",
+      appointment: updatedAppointment,
+      title: counterTitle,
+    });
+
+    res
+      .status(201)
+      .json({ message: "Appointment countered", updatedAppointment });
+  } catch (err) {
+    console.error("Error countering appointment:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Update Appointment
+router.put("/:appointmentId", protect, async (req, res) => {
+  const {
+    doctor_id,
+    child_id,
+    appointment_date,
+    time,
+    mode,
+    meeting_link,
+    description,
+    title,
+  } = req.body;
+  try {
+    // "2025-01-31 09:00:00.000" this is the format of the date
+    const app_date = new Date(appointment_date);
+    const app_time = new Date(time).getTime();
     const appointment = await Appointment.findOneAndUpdate(
       { _id: req.params.appointmentId, parent_id: req.user },
       {
-        status,
+        title,
+        doctor_id,
+        child_id,
+        appointment_date: app_date,
+        time: app_time,
+        mode,
         description,
-        counter_proposal_date:
-          status === "Countered" ? counter_proposal_date : null,
-        counter_mode: status === "Countered" ? counter_mode : null,
+        meeting_link: mode === "Online" ? meeting_link : null,
         updated_at: Date.now(),
       },
       { new: true }
@@ -114,9 +185,9 @@ router.put("/:appointmentId", protect, async (req, res) => {
       return res.status(404).json({ message: "Appointment not found" });
     }
 
-    res.status(201).json({ message: "Appointment updated", appointment });
+    res.status(200).json({ message: "Appointment updated", appointment });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 
@@ -134,7 +205,7 @@ router.delete("/:appointmentId", protect, async (req, res) => {
 
     res.status(200).json({ message: "Appointment deleted" });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 

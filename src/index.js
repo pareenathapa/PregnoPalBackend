@@ -7,13 +7,22 @@ const articleRoutes = require("./routes/articleRoutes");
 const Article = require("./models/Article");
 const Doctor = require("./models/Doctor");
 const appointmentRoutes = require("./routes/appointmentRoutes");
+const morgan = require("morgan");
+const cors = require("cors");
+const bodyParser = require("body-parser");
+const path = require("path");
 
 dotenv.config();
 
 const app = express();
 
 // Middleware
+app.use(cors({ origin: true }));
 app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.use(express.static(path.join(__dirname, "/")));
+app.use(morgan("dev"));
 
 // MongoDB connection
 mongoose
@@ -187,7 +196,7 @@ const seedDatabase = async () => {
 };
 
 // Seed database
-//seedDatabase();
+// seedDatabase();
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

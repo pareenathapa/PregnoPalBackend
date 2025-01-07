@@ -31,6 +31,7 @@ const appointmentSchema = new mongoose.Schema({
     default: "Pending",
   },
   counter_proposal_date: { type: Date, default: null },
+  counter_proposal_time: { type: String, default: null },
   counter_mode: { type: String, enum: ["Physical", "Online"], default: null },
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },

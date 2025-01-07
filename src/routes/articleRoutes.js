@@ -21,7 +21,7 @@ router.post("/", protect, async (req, res) => {
     await article.save();
     res.status(201).json({ message: "Article created", article });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 
@@ -60,7 +60,7 @@ router.get("/:id", async (req, res) => {
     }
     res.json(article);
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 
@@ -81,7 +81,7 @@ router.put("/:id", protect, async (req, res) => {
 
     res.status(201).json({ message: "Article updated", article });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 
@@ -96,7 +96,7 @@ router.delete("/:id", protect, async (req, res) => {
 
     res.status(200).json({ message: "Article deleted" });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 

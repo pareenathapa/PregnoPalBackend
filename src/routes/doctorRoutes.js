@@ -26,7 +26,7 @@ router.post("/", protect, isAdmin, async (req, res) => {
     await doctor.save();
     res.status(201).json({ message: "Doctor created", doctor });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 
@@ -36,7 +36,7 @@ router.get("/", protect, async (req, res) => {
     const doctors = await Doctor.find();
     res.status(200).json(doctors);
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 
@@ -65,7 +65,7 @@ router.put("/:doctorId", protect, isAdmin, async (req, res) => {
 
     res.status(201).json({ message: "Doctor updated", doctor });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 
@@ -80,7 +80,7 @@ router.delete("/:doctorId", protect, isAdmin, async (req, res) => {
 
     res.status(200).json({ message: "Doctor deleted" });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 
