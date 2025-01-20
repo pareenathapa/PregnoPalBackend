@@ -25,7 +25,7 @@ app.use(express.static(path.join(__dirname, "/")));
 app.use(morgan("dev"));
 
 // MongoDB connection
-mongoose
+mongoose 
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -46,30 +46,6 @@ app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/articles", articleRoutes);
 
-// Seed data
-const doctors = [
-  {
-    name: "Dr. Sarah Lee",
-    email: "sarahlee@doctor.com",
-    phone: "1234567890",
-    specialization: "Obstetrician",
-    availability_schedule: "Mon-Fri: 9 AM - 5 PM",
-  },
-  {
-    name: "Dr. Mark Green",
-    email: "markgreen@doctor.com",
-    phone: "1234567891",
-    specialization: "Pediatrician",
-    availability_schedule: "Tue-Sat: 10 AM - 6 PM",
-  },
-  {
-    name: "Dr. Laura Bennett",
-    email: "laurabennett@doctor.com",
-    phone: "1234567892",
-    specialization: "Radiologist",
-    availability_schedule: "Mon-Sat: 8 AM - 4 PM",
-  },
-];
 const articles = [
   {
     author: "Dr. Sarah Lee",
@@ -183,8 +159,6 @@ const articles = [
 // Seed function
 const seedDatabase = async () => {
   try {
-    await Doctor.deleteMany(); // Clear existing data
-    await Doctor.insertMany(doctors); // Insert seed data
     await Article.deleteMany(); // Clear existing data
     await Article.insertMany(articles); // Insert seed data
     console.log("Database seeded with articles!");

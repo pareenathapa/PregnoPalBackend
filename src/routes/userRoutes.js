@@ -8,9 +8,16 @@ const upload = require("../utils/upload");
 const router = express.Router();
 
 // Register User
-
 router.post("/register", upload.single("picture"), async (req, res) => {
-  const { name, email, password } = req.body;
+  const {
+    name,
+    email,
+    password,
+    role,
+    specialization,
+    available_from,
+    available_to,
+  } = req.body;
 
   try {
     const userExists = await User.findOne({ email });
@@ -28,12 +35,22 @@ router.post("/register", upload.single("picture"), async (req, res) => {
       picture =
         "https://c8.alamy.com/zooms/9/9c30002a90914b58b785a537a39421ba/2c80ydc.jpg";
     }
-
+    if (role === "doctor") {
+      if (!specialization || !available_from || !available_to) {
+        return res
+          .status(400)
+          .json({ message: "Please provide specialization and availability" });
+      }
+    }
     const user = new User({
       name,
       email,
       password: hashedPassword,
       picture,
+      role,
+      specialization,
+      available_from,
+      available_to,
     });
 
     await user.save();
@@ -62,6 +79,13 @@ router.post("/login", async (req, res) => {
 
     const token = generateToken(user._id);
     const userWithoutPassword = { ...user._doc, password: undefined, token };
+    // Convert all the date to millisecondsSinceEpoch
+    userWithoutPassword.created_at = userWithoutPassword.created_at.getTime();
+    userWithoutPassword.updated_at = userWithoutPassword.updated_at.getTime();
+    userWithoutPassword.available_from =
+      userWithoutPassword.available_from.getTime();
+    userWithoutPassword.available_to =
+      userWithoutPassword.available_to.getTime();
     res
       .status(200)
       .json({ message: "Login successful", user: userWithoutPassword });
@@ -75,11 +99,27 @@ router.get("/me", protect, async (req, res) => {
   try {
     console.log(req.user);
     const user = await User.findById(req.user);
-    const children = await Child.find({ parent_id: req.user });
+
     const token = generateToken(user._id);
     const userWithToken = { ...user._doc, token };
     console.log(userWithToken);
-    res.status(200).json({ user: userWithToken, children });
+    if (user.role != "doctor") {
+      const children = await Child.find({ parent_id: req.user });
+      // Convert all the date to millisecondsSinceEpoch
+      userWithToken.created_at = userWithToken.created_at.getTime();
+      userWithToken.updated_at = userWithToken.updated_at.getTime();
+      userWithToken.available_from = userWithToken.available_from.getTime();
+      userWithToken.available_to = userWithToken.available_to.getTime();
+
+      res.status(200).json({ user: userWithToken, children });
+    } else {
+      // Convert all the date to millisecondsSinceEpoch
+      userWithToken.created_at = userWithToken.created_at.getTime();
+      userWithToken.updated_at = userWithToken.updated_at.getTime();
+      userWithToken.available_from = userWithToken.available_from.getTime();
+      userWithToken.available_to = userWithToken.available_to.getTime();
+      res.status(200).json({ user: userWithToken });
+    }
   } catch (err) {
     res.status(500).json({ message: `Server error: ${err}` });
   }

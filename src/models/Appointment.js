@@ -8,7 +8,7 @@ const appointmentSchema = new mongoose.Schema({
   },
   doctor_id: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Doctor",
+    ref: "User",
     required: true,
   },
   child_id: {
@@ -27,7 +27,14 @@ const appointmentSchema = new mongoose.Schema({
   time: { type: String, required: true },
   status: {
     type: String,
-    enum: ["Pending", "Accepted", "Rejected", "Countered"],
+    enum: [
+      "Pending",
+      "Accepted",
+      "Rejected",
+      "Countered",
+      "Cancelled",
+      "Completed",
+    ],
     default: "Pending",
   },
   counter_proposal_date: { type: Date, default: null },
