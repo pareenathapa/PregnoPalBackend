@@ -43,6 +43,8 @@ const appointmentSchema = new mongoose.Schema({
   created_at: { type: Date, default: Date.now },
   updated_at: { type: Date, default: Date.now },
   description: { type: String, default: "" },
+  comment: { type: String, default: "" },
+  title: { type: String, default: "" },
 });
 
 const Appointment = mongoose.model("Appointment", appointmentSchema);

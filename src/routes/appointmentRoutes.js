@@ -3,6 +3,7 @@ const Appointment = require("../models/Appointment");
 const User = require("../models/user");
 const { protect } = require("../utils/auth");
 const io = require("../socket");
+const Notification = require("../models/Notification");
 
 const router = express.Router();
 // Get Appointments for a Specific Date
@@ -102,15 +103,31 @@ router.post("/", protect, async (req, res) => {
       to: doctor_id,
     });
 
+    const loggedInUser = await User.findById(req.user);
+    // Add New Appointment Notification
+    const notification = new Notification({
+      title: "New Appointment Request",
+      to: doctor_id,
+      appointment_id: appointment._id,
+      parent_id: loggedInUser._id,
+      doctor_id,
+      child_id,
+    });
+
+    console.log("Notification to be saved:", notification);
+
+    await notification.save();
+
     res.status(200).json({ message: "Appointment updated", appointment });
   } catch (err) {
+    console.error("Error while adding notification:", err);
     res.status(500).json({ message: "Server error", error: err });
   }
 });
 
 // Get All Appointments (Protected)
 router.get("/", protect, async (req, res) => {
-  const { status } = req.query;
+  const { status, sort } = req.query;
   try {
     const loggedInUser = await User.findById(req.user);
 
@@ -125,6 +142,12 @@ router.get("/", protect, async (req, res) => {
     const appointments = await Appointment.find(query)
       .populate("doctor_id")
       .populate("child_id");
+
+    if (sort === "asc") {
+      appointments.sort((a, b) => a.appointment_date - b.appointment_date);
+    } else if (sort === "desc") {
+      appointments.sort((a, b) => b.appointment_date - a.appointment_date);
+    }
 
     const appointmentDatesAndTimes = appointments.map((appointment) => {
       return {
@@ -211,12 +234,49 @@ router.post("/counter/:appointmentId", protect, async (req, res) => {
       to: appointment.parent_id,
     });
 
+    const notification = new Notification({
+      title: counterTitle,
+      to: appointment.doctor_id,
+      appointment_id: appointment._id,
+      parent_id: appointment.parent_id,
+      doctor_id: appointment.doctor_id,
+      child_id: appointment.child_id,
+    });
+    await notification.save();
+
     res
       .status(201)
       .json({ message: "Appointment countered", updatedAppointment });
   } catch (err) {
     console.error("Error countering appointment:", err);
     res.status(500).json({ message: "Server error", error: err.message });
+  }
+});
+
+// Complete Appointment
+router.post("/complete/:appointmentId", protect, async (req, res) => {
+  try {
+    const { comment } = req.body;
+
+    const loggedInUser = await User.findById(req.user);
+    if (loggedInUser.role != "doctor") {
+      return res.status(403).json({ message: "Only doctors can complete" });
+    }
+
+    // Get the appointment
+    const appointment = await Appointment.findOneAndUpdate(
+      { _id: req.params.appointmentId, doctor_id: req.user },
+      {
+        status: "Completed",
+        updated_at: Date.now(),
+        comment,
+      },
+      { new: true }
+    );
+
+    res.status(201).json({ message: "Appointment completed", appointment });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err });
   }
 });
 
@@ -303,6 +363,18 @@ router.post("/reject/:appointmentId", protect, async (req, res) => {
       to: appointment.parent_id,
       appointment,
     });
+
+    const notification = new Notification({
+      title: "Appointment Rejected",
+      to: appointment.parent_id,
+      appointment_id: appointment._id,
+      parent_id: appointment.parent_id,
+      doctor_id: appointment.doctor_id,
+      child_id: appointment.child_id,
+    });
+
+    await notification.save();
+
     res.status(201).json({ message: "Appointment rejected", appointment });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err });
@@ -332,7 +404,43 @@ router.post("/accept/:appointmentId", protect, async (req, res) => {
       to: appointment.parent_id,
       appointment,
     });
+
+    const notification = new Notification({
+      title: "Appointment Accepted",
+      to: appointment.parent_id,
+      appointment_id: appointment._id,
+      parent_id: appointment.parent_id,
+      doctor_id: appointment.doctor_id,
+      child_id: appointment.child_id,
+    });
+
+    await notification.save();
+
     res.status(201).json({ message: "Appointment accepted", appointment });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err });
+  }
+});
+
+// Get Today's Appointments
+router.get("/today/now", protect, async (req, res) => {
+  try {
+    const loggedIn = await User.findById(req.user);
+
+    const appointments = await Appointment.find({
+      doctor_id: loggedIn.role === "doctor" ? req.user : { $ne: req.user },
+    })
+      .populate("doctor_id")
+      .populate("child_id");
+
+    // Get the earliest appointment
+    const earliestAppointment = appointments.reduce(
+      (prev, current) =>
+        prev.appointment_date < current.appointment_date ? prev : current,
+      appointments[0] || null
+    );
+
+    res.status(200).json({ earliestAppointment });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err });
   }

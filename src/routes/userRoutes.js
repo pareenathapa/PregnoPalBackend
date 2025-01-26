@@ -62,6 +62,27 @@ router.post("/register", upload.single("picture"), async (req, res) => {
   }
 });
 
+// CHANGE PASSWORD
+router.post("/change-password", async (req, res) => {
+  const { email, password, confirmPassword } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(confirmPassword, salt);
+
+    user.password = hashedPassword;
+    await user.save();
+    res.status(201).json({ message: "Password changed" });
+  } catch (err) {
+    res.status(500).json({ message: `Server error: ${err}` });
+  }
+});
+
 // Login User
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -154,6 +175,14 @@ router.post("/child", protect, async (req, res) => {
 router.get("/children", protect, async (req, res) => {
   try {
     const children = await Child.find({ parent_id: req.user });
+    res.json(children);
+  } catch (err) {
+    res.status(500).json({ message: `Server error: ${err}` });
+  }
+});
+router.get("/allChildren", protect, async (req, res) => {
+  try {
+    const children = await Child.find();
     res.json(children);
   } catch (err) {
     res.status(500).json({ message: `Server error: ${err}` });

@@ -11,6 +11,7 @@ const morgan = require("morgan");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const path = require("path");
+const notificationRoutes = require("./routes/notificationRoutes");
 
 dotenv.config();
 
@@ -25,7 +26,7 @@ app.use(express.static(path.join(__dirname, "/")));
 app.use(morgan("dev"));
 
 // MongoDB connection
-mongoose 
+mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -45,6 +46,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/doctors", doctorRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/articles", articleRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 const articles = [
   {
