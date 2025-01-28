@@ -133,6 +133,7 @@ router.get("/me", protect, async (req, res) => {
       userWithToken.available_to = userWithToken.available_to.getTime();
 
       res.status(200).json({ user: userWithToken, children });
+      console.log(children)
     } else {
       // Convert all the date to millisecondsSinceEpoch
       userWithToken.created_at = userWithToken.created_at.getTime();
